@@ -1,0 +1,18 @@
+# Rutas API Bingo Deluxe REST
+
+## Usuarios
+- GET /api/users
+- POST /api/users
+
+## Bingo
+- POST /api/bingo/search
+
+## Registrador
+- GET /api/registrador
+- POST /api/registrador
+- GET /api/registrador/search?nombre_registrador=texto
+
+## Brigadas
+- GET /api/brigadas
+- POST /api/brigadas
+- PUT /api/brigadas/:id_brigada
