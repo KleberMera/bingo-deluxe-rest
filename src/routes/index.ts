@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { getUsers } from "../controllers/users.controller";
-
+import userRoutes from "./users.routes";
 
 const router = Router();
 
-router.get("/users", getUsers);
+// Prefijo para cada módulo
+router.use("/users", userRoutes);
 
 export default router;
