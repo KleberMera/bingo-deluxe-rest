@@ -3,6 +3,8 @@ import userRoutes from "./users/users.routes";
 import bingoRoutes from "./bingo/bingo.routes";
 import registradorRoutes from "./registrador/registrador.routes";
 import brigadasRoutes from "./brigadas/brigadas.routes";
+import entregasRoutes from "./entregas/entregas.routes";
+import calculoRoutes from "./calculo/calculo.routes";
 
 const router = Router();
 
@@ -14,5 +16,9 @@ router.use("/bingo", bingoRoutes);
 router.use("/registrador", registradorRoutes);
 
 router.use("/brigadas", brigadasRoutes);
+
+router.use("/entregas", entregasRoutes);
+
+router.use("/calculo", calculoRoutes);
 
 export default router;

@@ -1,18 +1,30 @@
 # Rutas API Bingo Deluxe REST
 
+## Cálculo de Tablas por Rango
+- **POST /api/calculo/tablas-por-rango** — Recibe rango_inicio, rango_fin y numeracion_por_tabla, devuelve los rangos de cada tabla y el total de tablas calculadas
+
+# Rutas API Bingo Deluxe REST
+
 ## Usuarios
-- GET /api/users
-- POST /api/users
+- **GET /api/users** — Listar usuarios
+- **POST /api/users** — Crear usuario
 
 ## Bingo
-- POST /api/bingo/search
+- **POST /api/bingo/search** — Buscar tabla de bingo por id_card, phone o table_code
 
 ## Registrador
-- GET /api/registrador
-- POST /api/registrador
-- GET /api/registrador/search?nombre_registrador=texto
+- **GET /api/registrador** — Listar registradores
+- **POST /api/registrador** — Crear registrador
+- **GET /api/registrador/search?nombre_registrador=texto** — Buscar registrador por nombre
 
 ## Brigadas
-- GET /api/brigadas
-- POST /api/brigadas
-- PUT /api/brigadas/:id_brigada
+- **GET /api/brigadas** — Listar brigadas
+- **POST /api/brigadas** — Crear brigada
+- **PUT /api/brigadas/:id_brigada** — Editar brigada
+
+## Entregas de Tablas a Registrador
+- **GET /api/entregas** — Listar todas las entregas y devoluciones
+- **POST /api/entregas** — Crear registro de entrega o devolución
+- **PUT /api/entregas/:id** — Editar registro de entrega o devolución
+- **DELETE /api/entregas/:id** — Eliminar registro
+- **GET /api/entregas/search?id_brigada=...&id_registrador=...** — Buscar entregas/devoluciones por brigada y registrador

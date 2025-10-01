@@ -1,0 +1,16 @@
+CREATE TABLE entregas_tablas_registrador (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  id_brigada INT NOT NULL,
+  id_registrador INT NOT NULL,
+  rango_inicio INT NOT NULL,
+  rango_fin INT NOT NULL,
+  tipo ENUM('entrega', 'devolucion') NOT NULL,
+  fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  observacion TEXT,
+  total_entregado INT DEFAULT NULL,
+  total_devolucion INT DEFAULT NULL,
+  FOREIGN KEY (id_brigada) REFERENCES brigadas(id_brigada),
+  FOREIGN KEY (id_registrador) REFERENCES registrador(id)
+);
+
+
