@@ -1,6 +1,30 @@
 import { Request, Response } from "express";
 import pool from "../../config/db";
 
+interface UsuarioOtroSorteo {
+  id: number;
+  first_name: string;
+  last_name: string;
+  id_card: string;
+  phone?: string;
+  provincia_id?: number;
+  canton_id?: number;
+  barrio_id?: number;
+  latitud?: number;
+  longitud?: number;
+  ubicacion_detallada?: string;
+  otp?: string | null;
+  otp_expires_at?: Date | null;
+  phone_verified: boolean | number;
+  id_registrador?: number;
+  id_tipo_registrador_snapshot?: number;
+  nombre_tipo_registrador?: string;
+  id_evento?: number;
+  fecha_registro: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export const checkUserExistsByIdCard = async (req: Request, res: Response) => {
   const { id_card } = req.params;
   
@@ -131,29 +155,12 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 
     // Insertar el nuevo usuario (usar id_registrador como en la versión JS)
-    // Obtener snapshot del tipo de registrador (id + nombre) si se proporcionó id_registrador
-    let idTipoSnapshot: number | null = null;
-    let nombreTipoSnapshot: string | null = null;
-    if (id_registrador) {
-      const [regRows]: any = await connection.query(
-        `SELECT r.id_tipo_registrador, t.nombre_tipo
-         FROM registrador r
-         LEFT JOIN tipos_registradores t ON r.id_tipo_registrador = t.id
-         WHERE r.id = ? LIMIT 1`,
-        [id_registrador]
-      );
-      if (regRows && regRows.length > 0) {
-        idTipoSnapshot = regRows[0].id_tipo_registrador ?? null;
-        nombreTipoSnapshot = regRows[0].nombre_tipo ?? null;
-      }
-    }
-
     const [result]: any = await connection.query(
       `INSERT INTO usuarios_otros_sorteos (
         first_name, last_name, id_card, phone, provincia_id, 
         canton_id, barrio_id, latitud, longitud, ubicacion_detallada, 
-        id_registrador, id_tipo_registrador_snapshot, nombre_tipo_registrador, id_evento, fecha_registro
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        id_registrador, id_evento, fecha_registro
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         first_name?.trim(),
         last_name?.trim(),
@@ -166,8 +173,6 @@ export const registerUser = async (req: Request, res: Response) => {
         longitud || null,
         ubicacion_detallada ? ubicacion_detallada.trim() : null,
         id_registrador || null,
-        idTipoSnapshot,
-        nombreTipoSnapshot,
         id_evento || null
       ]
     );
@@ -188,9 +193,6 @@ export const registerUser = async (req: Request, res: Response) => {
         first_name,
         last_name,
         id_card,
-        id_registrador: id_registrador || null,
-        id_tipo_registrador_snapshot: idTipoSnapshot,
-        nombre_tipo_registrador: nombreTipoSnapshot,
         fecha_registro: new Date().toISOString()
       }
     });
@@ -200,6 +202,58 @@ export const registerUser = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Error interno del servidor'
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+export const getAllUsers = async (_req: Request, res: Response) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    // Obtener todos los usuarios ordenados por fecha de registro descendente
+    const [rows] = await connection.query(
+      `SELECT 
+        id,
+        first_name,
+        last_name,
+        id_card,
+        phone,
+        provincia_id,
+        canton_id,
+        barrio_id,
+        latitud,
+        longitud,
+        ubicacion_detallada,
+        otp,
+        otp_expires_at,
+        phone_verified,
+        id_registrador,
+        id_tipo_registrador_snapshot,
+        nombre_tipo_registrador,
+        id_evento,
+        fecha_registro,
+        created_at,
+        updated_at
+      FROM usuarios_otros_sorteos
+      ORDER BY fecha_registro DESC`
+    ) as unknown as [UsuarioOtroSorteo[]];
+    
+    const users = rows as UsuarioOtroSorteo[];
+
+    res.status(200).json({
+      success: true,
+      message: 'Usuarios obtenidos exitosamente',
+      data: users,
+      count: Array.isArray(users) ? users.length : 0
+    });
+  } catch (error) {
+    console.error('Error en getAllUsers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener los usuarios',
+      data: null
     });
   } finally {
     connection.release();

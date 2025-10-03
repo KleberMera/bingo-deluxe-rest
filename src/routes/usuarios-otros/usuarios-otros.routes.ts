@@ -9,4 +9,8 @@ router.get('/check/:id_card', usuariosOtrosController.checkUserExistsByIdCard);
 // Registrar un nuevo usuario
 router.post('/register', usuariosOtrosController.registerUser);
 
+
+// Obtener todos los usuarios
+router.get('/', usuariosOtrosController.getAllUsers);
+
 export default router;
