@@ -5,14 +5,21 @@
   "scripts": {
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage production",
+    "offline": "serverless offline start"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@codegenie/serverless-express": "^4.17.0",
+    "@types/aws-lambda": "^8.10.153",
+    "@types/cors": "^2.8.19",
     "@types/mysql": "^2.15.27",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "mysql2": "^3.15.1"
@@ -21,6 +28,10 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.6.1",
     "nodemon": "^3.1.10",
+    "serverless": "^3.40.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-jetpack": "^0.12.0",
+    "serverless-offline": "^14.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
