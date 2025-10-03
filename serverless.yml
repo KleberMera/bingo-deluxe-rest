@@ -1,4 +1,4 @@
-service: bingo-deluxe-rest
+service: bingo-rest-api
 
 frameworkVersion: '3'
 

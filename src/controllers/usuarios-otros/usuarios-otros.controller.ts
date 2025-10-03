@@ -155,12 +155,29 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 
     // Insertar el nuevo usuario (usar id_registrador como en la versión JS)
+    // Obtener snapshot del tipo de registrador (id + nombre) si se proporcionó id_registrador
+    let idTipoSnapshot: number | null = null;
+    let nombreTipoSnapshot: string | null = null;
+    if (id_registrador) {
+      const [regRows]: any = await connection.query(
+        `SELECT r.id_tipo_registrador, t.nombre_tipo
+         FROM registrador r
+         LEFT JOIN tipos_registradores t ON r.id_tipo_registrador = t.id
+         WHERE r.id = ? LIMIT 1`,
+        [id_registrador]
+      );
+      if (regRows && regRows.length > 0) {
+        idTipoSnapshot = regRows[0].id_tipo_registrador ?? null;
+        nombreTipoSnapshot = regRows[0].nombre_tipo ?? null;
+      }
+    }
+
     const [result]: any = await connection.query(
       `INSERT INTO usuarios_otros_sorteos (
         first_name, last_name, id_card, phone, provincia_id, 
         canton_id, barrio_id, latitud, longitud, ubicacion_detallada, 
-        id_registrador, id_evento, fecha_registro
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        id_registrador, id_tipo_registrador_snapshot, nombre_tipo_registrador, id_evento, fecha_registro
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         first_name?.trim(),
         last_name?.trim(),
@@ -173,6 +190,8 @@ export const registerUser = async (req: Request, res: Response) => {
         longitud || null,
         ubicacion_detallada ? ubicacion_detallada.trim() : null,
         id_registrador || null,
+        idTipoSnapshot,
+        nombreTipoSnapshot,
         id_evento || null
       ]
     );
@@ -193,6 +212,9 @@ export const registerUser = async (req: Request, res: Response) => {
         first_name,
         last_name,
         id_card,
+        id_registrador: id_registrador || null,
+        id_tipo_registrador_snapshot: idTipoSnapshot,
+        nombre_tipo_registrador: nombreTipoSnapshot,
         fecha_registro: new Date().toISOString()
       }
     });
@@ -207,6 +229,8 @@ export const registerUser = async (req: Request, res: Response) => {
     connection.release();
   }
 };
+
+
 
 export const getAllUsers = async (_req: Request, res: Response) => {
   const connection = await pool.getConnection();
