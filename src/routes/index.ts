@@ -18,7 +18,7 @@ router.use("/entregas", entregasRoutes);
 
 // Nuevos endpoints sin prefijo /v2
 router.use("/location", locationRoutes);
-//router.use("/usuarios-otros", registradoresRoutes);
+router.use("/usuarios-otros", registradorRoutes);
 
 router.use("/calculo", calculoRoutes);
 
