@@ -20,6 +20,8 @@ CREATE TABLE `usuarios_otros_sorteos` (
   `otp_expires_at` timestamp NULL DEFAULT NULL,
   `phone_verified` tinyint(1) DEFAULT '0',
   `id_registrador` int DEFAULT NULL,
+  `id_tipo_registrador_snapshot` int DEFAULT NULL COMMENT 'Snapshot: id del tipo de registrador al momento del registro',
+  `nombre_tipo_registrador` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Snapshot: nombre del tipo de registrador al momento del registro',
   `id_evento` int DEFAULT NULL,
   `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha específica de registro en el sorteo'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -33,6 +35,7 @@ ALTER TABLE `usuarios_otros_sorteos`
   ADD KEY `fk_usuarios_otros_barrio` (`barrio_id`),
   ADD KEY `idx_otp` (`otp_expires_at`,`otp`),
   ADD KEY `fk_usuarios_otros_registrador` (`id_registrador`),
+  ADD KEY `fk_usuarios_otros_tipo_registrador_snapshot` (`id_tipo_registrador_snapshot`),
   ADD KEY `fk_usuarios_otros_evento` (`id_evento`),
   ADD KEY `idx_fecha_registro` (`fecha_registro`);
 
