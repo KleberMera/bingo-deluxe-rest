@@ -90,85 +90,71 @@ export const createRegistrador = async (req: Request, res: Response) => {
 
 export const getRegistradoresConTipoActivos = async (req: Request, res: Response) => {
   const connection = await pool.getConnection();
+  
   try {
-      // Primero verificar si hay brigadas activas
-      const brigadaQuery = `
-          SELECT 
-              id_brigada,
-              nombre_brigada,
-              activa,
-              max_tables_per_person,
-              fecha_creacion
-          FROM brigadas 
-          WHERE activa = 1 
-          ORDER BY fecha_creacion DESC 
-          LIMIT 1
-      `;
+    // Primero verificar si hay brigadas activas
+    const brigadaQuery = `
+ SELECT 
+          id_brigada,
+          nombre_brigada,
+          activa,
+          max_tables_per_person,
+          fecha_creacion
+        FROM brigadas 
+        WHERE activa = 1 
+        ORDER BY fecha_creacion DESC 
+        LIMIT 1
+    `;
 
-      const [brigadaRows] : any = await connection.query(brigadaQuery);
-      const brigadaActiva = brigadaRows[0] || null;
-      
-      if (!brigadaActiva) {
-          return res.status(200).json({
-              success: false,
-              message: 'No hay brigadas activas disponibles',
-              data: []
-          });
-      }
-
-      const query = `
-          SELECT 
-              r.id,
-              r.nombre_registrador,
-              r.id_tipo_registrador,
-              tr.nombre_tipo,
-              tr.descripcion as tipo_descripcion,
-              tr.activo as tipo_activo
-          FROM registrador r
-          INNER JOIN tipos_registradores tr ON r.id_tipo_registrador = tr.id
-          WHERE tr.activo = 1
-          ORDER BY r.nombre_registrador ASC
-      `;
-
-      const [rows] : any = await connection.query(query);
-      
-      res.status(200).json({
-          success: true,
-          message: 'Registradores obtenidos exitosamente',
-          data: rows,
-          brigadaInfo: {
-              id_evento: brigadaActiva.id_brigada,
-              nombre_brigada: brigadaActiva.nombre_brigada,
-              activa: brigadaActiva.activa
-          },
-          total: rows.length
+    const [brigadaRows]: any = await connection.query(brigadaQuery);
+    const brigadaActiva = brigadaRows[0] || null;
+    
+    if (!brigadaActiva) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay brigadas activas disponibles',
+        data: []
       });
+    }
+
+    const query = `
+    SELECT 
+          r.id,
+          r.nombre_registrador,
+          r.id_tipo_registrador,
+          tr.nombre_tipo,
+          tr.descripcion as tipo_descripcion,
+          tr.activo as tipo_activo
+        FROM registrador r
+        INNER JOIN tipos_registradores tr ON r.id_tipo_registrador = tr.id
+        WHERE tr.activo = 1
+        ORDER BY r.nombre_registrador ASC
+    `;
+
+    const [rows]: any = await connection.query(query);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Registradores obtenidos exitosamente',
+      data: rows,
+      brigadaInfo: {
+        id_evento: brigadaActiva.id_brigada,
+        nombre_brigada: brigadaActiva.nombre_brigada,
+        activa: brigadaActiva.activa
+      },
+      total: rows.length
+    });
   } catch (error) {
-      console.error('Error en getRegistradoresConTipoActivos:', error);
-      res.status(500).json({
-          success: false,
-          message: 'Error interno del servidor',
-          data: []
-      });
+    console.error('Error en getRegistradoresConTipoActivos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      data: []
+    });
   } finally {
-      connection.release();
+    connection.release();
   }
 };
 
 
-export const getRegistradoresActivosConTipo = async (req: Request, res: Response) => {
-  try {
-      const [rows]: any = await pool.query(`
-          SELECT r.*, t.nombre as tipo_registrador 
-          FROM registradores r
-          JOIN tipos_registrador t ON r.tipo_id = t.id
-          WHERE r.estado = 'ACTIVO'
-          ORDER BY r.nombres, r.apellidos
-      `);
-      res.json(rows);
-  } catch (error) {
-      console.error('Error al obtener registradores activos:', error);
-      res.status(500).json({ message: 'Error al obtener los registradores activos' });
-  }
-};
 
