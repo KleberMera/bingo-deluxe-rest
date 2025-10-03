@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+//cors
 app.use(cors());
 
 // Middleware para formatear todas las respuestas
