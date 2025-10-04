@@ -119,7 +119,7 @@ export const allMetrics = async (req: Request, res: Response) => {
     const qBrigadasActivas = pool.query("SELECT COUNT(*) AS brigadas_activas FROM brigadas WHERE activa = 1");
     const qTotalRegistros = pool.query("SELECT COUNT(*) AS total_registros FROM usuarios_otros_sorteos");
     const qTotalHoy = pool.query("SELECT COUNT(*) AS total_hoy FROM usuarios_otros_sorteos WHERE DATE(fecha_registro) = CURDATE()");
-    const qRegistradoresActivos = pool.query("SELECT COUNT(DISTINCT id_registrador) AS registradores_activos FROM entregas_tablas_registrador WHERE id_registrador IS NOT NULL");
+    const qRegistradoresActivos = pool.query("SELECT COUNT(DISTINCT id_registrador) AS registradores_activos FROM usuarios_otros_sorteos WHERE id_registrador IS NOT NULL");
     const qTotalUsuariosEnBrigadas = pool.query(
       "SELECT COUNT(*) AS total_usuarios_en_brigadas FROM usuarios_otros_sorteos u WHERE u.id_evento IS NOT NULL"
     );
@@ -144,6 +144,7 @@ export const allMetrics = async (req: Request, res: Response) => {
 
     const qBrigadasWithCounts = pool.query(
       `SELECT b.id_brigada, b.nombre_brigada, b.activa,
+        b.descripcion,
         COALESCE(cnt.total, 0) AS total_registros
       FROM brigadas b
       LEFT JOIN (
@@ -157,8 +158,13 @@ export const allMetrics = async (req: Request, res: Response) => {
 
     // registradores por brigada y por tipo (para mostrar nombres y totales)
     const qRegistradoresPorTipo = pool.query(
-      `SELECT u.id_evento AS id_brigada, u.id_registrador, r.nombre_registrador,
-        COALESCE(u.nombre_tipo_registrador, tr.nombre_tipo, 'SIN_TIPO') AS tipo, COUNT(*) AS total
+      `SELECT u.id_evento AS id_brigada,
+        u.id_registrador,
+        r.nombre_registrador,
+        COALESCE(u.nombre_tipo_registrador, tr.nombre_tipo, 'SIN_TIPO') AS tipo,
+        COUNT(*) AS total,
+        SUM(CASE WHEN DATE(u.fecha_registro) = CURDATE() THEN 1 ELSE 0 END) AS total_hoy,
+        WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number
        FROM usuarios_otros_sorteos u
        LEFT JOIN registrador r ON u.id_registrador = r.id
        LEFT JOIN tipos_registradores tr ON u.id_tipo_registrador_snapshot = tr.id
@@ -191,13 +197,40 @@ export const allMetrics = async (req: Request, res: Response) => {
   const brigadasRowsArr = (results[8] as any)[0] as any[];
   const registradoresPorTipoArr = (results[9] as any)[0] as any[];
 
+    // calcular métricas adicionales para la brigada activa (si existe)
+    const activeBrigada = brigadasRowsArr.find((b: any) => Number(b.activa) === 1) || null;
+    let totalHoyBrigadaActiva = 0;
+    let semanaUltimoRegistroBrigadaActiva: number | null = null;
+    if (activeBrigada) {
+      try {
+        const [rHoy]: any = await pool.query(
+          "SELECT COUNT(*) AS total_hoy_brigada FROM usuarios_otros_sorteos WHERE id_evento = ? AND DATE(fecha_registro) = CURDATE()",
+          [activeBrigada.id_brigada]
+        );
+        totalHoyBrigadaActiva = Number(rHoy[0]?.total_hoy_brigada ?? 0);
+
+        const [rWeek]: any = await pool.query(
+          "SELECT WEEKOFYEAR(MAX(fecha_registro)) AS week_number FROM usuarios_otros_sorteos WHERE id_evento = ?",
+          [activeBrigada.id_brigada]
+        );
+        semanaUltimoRegistroBrigadaActiva = rWeek[0]?.week_number ? Number(rWeek[0].week_number) : null;
+      } catch (e) {
+        // no bloquear toda la respuesta por un fallo en estas consultas accesorias
+        totalHoyBrigadaActiva = 0;
+        semanaUltimoRegistroBrigadaActiva = null;
+      }
+    }
+
     const overview = {
       total_brigadas: Number(totalBRows[0]?.total_brigadas ?? 0),
       brigadas_activas: Number(brigadasActivasRows[0]?.brigadas_activas ?? 0),
       registradores_activos: Number(registradoresActivosRows[0]?.registradores_activos ?? 0),
       total_registros: Number(totalRegRows[0]?.total_registros ?? 0),
       total_hoy: Number(totalHoyRows[0]?.total_hoy ?? 0),
-      total_usuarios_en_brigadas: Number(totalUsuariosEnBrigadasRows[0]?.total_usuarios_en_brigadas ?? 0)
+      total_usuarios_en_brigadas: Number(totalUsuariosEnBrigadasRows[0]?.total_usuarios_en_brigadas ?? 0),
+      // métricas adicionales solicitadas por el usuario
+      total_hoy_brigada_activa: totalHoyBrigadaActiva,
+      //semana_ultimo_registro_brigada_activa: semanaUltimoRegistroBrigadaActiva
     };
 
     // Normalizar últimos 12 meses
@@ -220,17 +253,24 @@ export const allMetrics = async (req: Request, res: Response) => {
     });
 
     // mapear registradores por brigada y tipo
-    const registradoresPorBrigadaTipo: Record<string, { id_registrador: number | null; nombre_registrador: string | null; total: number }[]> = {};
+  const registradoresPorBrigadaTipo: Record<string, { id_registrador: number | null; nombre_registrador: string | null; total: number; total_hoy: number; semana_ultimo_registro: number | null }[]> = {};
     registradoresPorTipoArr.forEach((r: any) => {
       const idb = String(r.id_brigada ?? '');
       const key = `${idb}|${r.tipo ?? 'SIN_TIPO'}`;
       if (!registradoresPorBrigadaTipo[key]) registradoresPorBrigadaTipo[key] = [];
-      registradoresPorBrigadaTipo[key].push({ id_registrador: r.id_registrador ?? null, nombre_registrador: r.nombre_registrador ?? null, total: Number(r.total) });
+      registradoresPorBrigadaTipo[key].push({
+        id_registrador: r.id_registrador ?? null,
+        nombre_registrador: r.nombre_registrador ?? null,
+        total: Number(r.total),
+        total_hoy: Number(r.total_hoy ?? 0),
+        semana_ultimo_registro: r.week_number ? Number(r.week_number) : null
+      });
     });
 
     // Construir array final con brigadas y su desglose por tipo
     const brigadasConTipo = brigadasRowsArr.map((b: any) => ({
       id_brigada: b.id_brigada,
+      descripcion: b.descripcion ?? null,
       nombre_brigada: b.nombre_brigada,
       activa: b.activa,
       total_registros: b.total_registros,
@@ -246,7 +286,7 @@ export const allMetrics = async (req: Request, res: Response) => {
         overview,
         registros_por_mes: registrosPorMesNorm,
         total_por_tipo_registro_por_brigada: brigadasConTipo,
-        brigadas: brigadasRowsArr
+        brigadas: brigadasRowsArr.map((b: any) => ({ id_brigada: b.id_brigada, nombre_brigada: b.nombre_brigada, activa: b.activa, total_registros: b.total_registros, descripcion: b.descripcion ?? null }))
       },
       message: "Todas las métricas",
       error: null,
