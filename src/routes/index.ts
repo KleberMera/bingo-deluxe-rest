@@ -7,6 +7,7 @@ import entregasRoutes from "./entregas/entregas.routes";
 import calculoRoutes from "./calculo/calculo.routes";
 import locationRoutes from "./location/location.routes";
 import usuariosOtrosRoutes from "./usuarios-otros/usuarios-otros.routes";
+import tiposRegistradoresRoutes from "./tipos-registradores/tipos-registradores.routes";
 import metricasRoutes from "../features/metricas/routes";
 
 const router = Router();
@@ -15,6 +16,7 @@ const router = Router();
 router.use("/users", userRoutes);
 router.use("/bingo", bingoRoutes);
 router.use("/registrador", registradorRoutes);
+router.use("/tipos-registradores", tiposRegistradoresRoutes);
 router.use("/brigadas", brigadasRoutes);
 router.use("/entregas", entregasRoutes);
 router.use("/usuarios-otros", usuariosOtrosRoutes);
