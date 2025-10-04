@@ -1,0 +1,12 @@
+CREATE TABLE `entregas_tablas_registrador` (
+  `id` int(11) NOT NULL,
+  `id_brigada` int(11) NOT NULL,
+  `id_registrador` int(11) NOT NULL,
+  `rango_inicio` int(11) NOT NULL,
+  `rango_fin` int(11) NOT NULL,
+  `tipo` enum('entrega','devolucion') NOT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  `observacion` text DEFAULT NULL,
+  `total_entregado` int(11) DEFAULT NULL,
+  `total_devolucion` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
