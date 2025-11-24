@@ -4,10 +4,10 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs20.x
   region: us-west-1  # Ajusta según tu región preferida
-  stage: ${opt:stage, 'dev'}
-  memorySize: 512
+  stage: production
+  memorySize: 2048
   logRetentionInDays: 7
   timeout: 15
   apiGateway:
@@ -31,7 +31,7 @@ plugins:
   - serverless-offline
   - serverless-dotenv-plugin
 
-custom:
-  serverless-offline:
-    httpPort: 4000  # Puerto para desarrollo local
-    noPrependStageInUrl: true
+# custom:
+#   serverless-offline:
+#     httpPort: 4000  # Puerto para desarrollo local
+#     noPrependStageInUrl: true
