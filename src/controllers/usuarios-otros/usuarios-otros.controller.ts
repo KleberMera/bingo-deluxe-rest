@@ -62,19 +62,46 @@ export const checkUserExistsByIdCard = async (req: Request, res: Response) => {
 
     const activeBrigade = brigadaRows[0];
 
-    // Luego, verificar si el usuario existe
-    const [userRows]: any = await connection.query(
-      `SELECT * FROM usuarios_otros_sorteos WHERE id_card = ?`,
-      [id_card]
+    // Verificar si el usuario existe en la brigada activa
+    const [userInActiveBrigadeRows]: any = await connection.query(
+      `SELECT * FROM usuarios_otros_sorteos WHERE id_card = ? AND id_evento = ?`,
+      [id_card, activeBrigade.id_brigada]
     );
 
-    const user = userRows[0] || null;
+    // Verificar si el usuario existe en cualquier otra brigada
+    const [userInOtherBrigadeRows]: any = await connection.query(
+      `SELECT * FROM usuarios_otros_sorteos WHERE id_card = ? AND id_evento != ?`,
+      [id_card, activeBrigade.id_brigada]
+    );
+
+    const userInActiveBrigade = userInActiveBrigadeRows[0] || null;
+    const userInOtherBrigade = userInOtherBrigadeRows[0] || null;
+    let message: string;
+    let exists: boolean;
+    let userData = null;
+
+    if (userInActiveBrigade) {
+      // Usuario ya está registrado en la brigada activa
+      message = 'Usuario ya registrado en esta brigada';
+      exists = true;
+      userData = userInActiveBrigade;
+    } else if (userInOtherBrigade) {
+      // Usuario existe pero en otra brigada diferente
+      message = 'Usuario registrado en otra brigada, puede proceder el registro en esta';
+      exists = false;
+      userData = userInOtherBrigade;
+    } else {
+      // Usuario no existe en ninguna brigada
+      message = 'Usuario no encontrado, puede continuar';
+      exists = false;
+      userData = null;
+    }
     
     const response = {
       success: true,
-      message: user ? 'Usuario ya registrado' : 'Usuario no encontrado, puede continuar',
-      data: user,
-      exists: !!user,
+      message,
+      data: userData,
+      exists,
       brigadaInfo: {
         id_evento: activeBrigade.id_brigada,
         nombre_brigada: activeBrigade.nombre_brigada,
@@ -133,10 +160,29 @@ export const registerUser = async (req: Request, res: Response) => {
   try {
     await connection.beginTransaction();
 
-    // Verificar si el usuario ya existe
+    // Obtener la brigada activa
+    const [brigadaRows]: any = await connection.query(
+      `SELECT id_brigada, nombre_brigada, activa 
+       FROM brigadas 
+       WHERE activa = 1 
+       ORDER BY fecha_creacion DESC 
+       LIMIT 1`
+    );
+
+    if (brigadaRows.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'No hay brigadas activas disponibles'
+      });
+    }
+
+    const activeBrigade = brigadaRows[0];
+
+    // Verificar si el usuario ya existe en la brigada activa
     const [existingUsers]: any = await connection.query(
-      `SELECT * FROM usuarios_otros_sorteos WHERE id_card = ?`,
-      [id_card]
+      `SELECT * FROM usuarios_otros_sorteos WHERE id_card = ? AND id_evento = ?`,
+      [id_card, activeBrigade.id_brigada]
     );
 
     if (existingUsers.length > 0) {
@@ -144,12 +190,13 @@ export const registerUser = async (req: Request, res: Response) => {
       const existing = existingUsers[0];
       return res.status(409).json({
         success: false,
-        message: 'Ya existe un usuario registrado con esta cédula',
+        message: 'Ya existe un usuario registrado con esta cédula en la brigada activa',
         user: {
           id: existing.id,
           first_name: existing.first_name,
           last_name: existing.last_name,
-          fecha_registro: existing.fecha_registro
+          fecha_registro: existing.fecha_registro,
+          brigada_actual: activeBrigade.nombre_brigada
         }
       });
     }
@@ -192,7 +239,7 @@ export const registerUser = async (req: Request, res: Response) => {
         id_registrador || null,
         idTipoSnapshot,
         nombreTipoSnapshot,
-        id_evento || null
+        id_evento || activeBrigade.id_brigada
       ]
     );
 
