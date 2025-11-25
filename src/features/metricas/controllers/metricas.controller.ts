@@ -158,19 +158,33 @@ export const allMetrics = async (req: Request, res: Response) => {
 
     // registradores por brigada y por tipo (para mostrar nombres y totales)
     const qRegistradoresPorTipo = pool.query(
-      `SELECT u.id_evento AS id_brigada,
-        u.id_registrador,
-        r.nombre_registrador,
-        COALESCE(u.nombre_tipo_registrador, tr.nombre_tipo, 'SIN_TIPO') AS tipo,
-        COUNT(*) AS total,
-        SUM(CASE WHEN DATE(u.fecha_registro) = CURDATE() THEN 1 ELSE 0 END) AS total_hoy,
-        WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number
-       FROM usuarios_otros_sorteos u
-       LEFT JOIN registrador r ON u.id_registrador = r.id
-       LEFT JOIN tipos_registradores tr ON u.id_tipo_registrador_snapshot = tr.id
-       WHERE u.id_evento IS NOT NULL
-       GROUP BY u.id_evento, tipo, u.id_registrador
-       ORDER BY u.id_evento, tipo, total DESC`
+      `SELECT 
+    COALESCE(u.id_evento, 
+             CASE 
+                 WHEN tr.activo = 1 THEN (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)
+                 ELSE null
+             END) AS id_brigada,
+    r.id AS id_registrador,
+    r.nombre_registrador,
+    COALESCE(u.nombre_tipo_registrador,
+            tr.nombre_tipo,
+            'SIN_TIPO') AS tipo,
+    COUNT(u.id) AS total,
+    SUM(CASE
+        WHEN DATE(u.fecha_registro) = CURDATE() THEN 1
+        ELSE 0
+    END) AS total_hoy,
+    WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number
+FROM
+    registrador r
+        LEFT JOIN
+    usuarios_otros_sorteos u ON r.id = u.id_registrador
+        AND u.id_evento IS NOT NULL
+        LEFT JOIN
+    tipos_registradores tr ON r.id_tipo_registrador = tr.id
+WHERE (u.nombre_tipo_registrador IS NOT NULL OR tr.nombre_tipo IS NOT NULL)
+GROUP BY r.id , id_brigada , tipo
+ORDER BY id_brigada , tipo , total DESC`
     );
 
     const results = await Promise.all([
