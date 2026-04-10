@@ -1,6 +1,33 @@
 import { Request, Response } from "express";
 import pool from "../../../config/db";
 
+// Función para convertir segundos a formato legible
+const formatearTiempoInactividad = (segundos: number | null): string | null => {
+  if (segundos === null || segundos === undefined) return null;
+  
+  if (segundos < 60) {
+    return `hace ${segundos} segundo${segundos !== 1 ? 's' : ''}`;
+  }
+  
+  const minutos = Math.floor(segundos / 60);
+  const segundosRestantes = segundos % 60;
+  
+  if (minutos < 60) {
+    if (segundosRestantes > 0) {
+      return `hace ${minutos}:${String(segundosRestantes).padStart(2, '0')} minutos`;
+    }
+    return `hace ${minutos} minuto${minutos !== 1 ? 's' : ''}`;
+  }
+  
+  const horas = Math.floor(minutos / 60);
+  const minutosRestantes = minutos % 60;
+  
+  if (minutosRestantes > 0) {
+    return `hace ${horas} hora${horas !== 1 ? 's' : ''} y ${minutosRestantes} minuto${minutosRestantes !== 1 ? 's' : ''}`;
+  }
+  return `hace ${horas} hora${horas !== 1 ? 's' : ''}`;
+};
+
 // Resumen general de métricas
 export const overviewMetrics = async (req: Request, res: Response) => {
   try {
@@ -174,7 +201,10 @@ export const allMetrics = async (req: Request, res: Response) => {
         WHEN DATE(u.fecha_registro) = CURDATE() THEN 1
         ELSE 0
     END) AS total_hoy,
-    WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number
+    WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number,
+    MAX(u.fecha_registro) AS ultimo_registro,
+    TIME(MAX(u.fecha_registro)) AS hora_ultimo_registro,
+    TIMESTAMPDIFF(SECOND, MAX(u.fecha_registro), CONVERT_TZ(NOW(), @@session.time_zone, 'America/Guayaquil')) AS tiempo_inactividad_segundos
 FROM
     registrador r
         LEFT JOIN
@@ -267,17 +297,22 @@ ORDER BY id_brigada , tipo , total DESC`
     });
 
     // mapear registradores por brigada y tipo
-  const registradoresPorBrigadaTipo: Record<string, { id_registrador: number | null; nombre_registrador: string | null; total: number; total_hoy: number; semana_ultimo_registro: number | null }[]> = {};
+  const registradoresPorBrigadaTipo: Record<string, { id_registrador: number | null; nombre_registrador: string | null; total: number; total_hoy: number; semana_ultimo_registro: number | null; ultimo_registro: string | null; hora_ultimo_registro: string | null; tiempo_inactividad_segundos: number | null; tiempo_inactividad: string | null }[]> = {};
     registradoresPorTipoArr.forEach((r: any) => {
       const idb = String(r.id_brigada ?? '');
       const key = `${idb}|${r.tipo ?? 'SIN_TIPO'}`;
       if (!registradoresPorBrigadaTipo[key]) registradoresPorBrigadaTipo[key] = [];
+      const tiempoSegundos = r.tiempo_inactividad_segundos ? Number(r.tiempo_inactividad_segundos) : null;
       registradoresPorBrigadaTipo[key].push({
         id_registrador: r.id_registrador ?? null,
         nombre_registrador: r.nombre_registrador ?? null,
         total: Number(r.total),
         total_hoy: Number(r.total_hoy ?? 0),
-        semana_ultimo_registro: r.week_number ? Number(r.week_number) : null
+        semana_ultimo_registro: r.week_number ? Number(r.week_number) : null,
+        ultimo_registro: r.ultimo_registro ?? null,
+        hora_ultimo_registro: r.hora_ultimo_registro ?? null,
+        tiempo_inactividad_segundos: tiempoSegundos,
+        tiempo_inactividad: formatearTiempoInactividad(tiempoSegundos)
       });
     });
 

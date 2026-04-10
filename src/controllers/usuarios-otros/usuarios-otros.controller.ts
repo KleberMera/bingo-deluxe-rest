@@ -224,7 +224,7 @@ export const registerUser = async (req: Request, res: Response) => {
         first_name, last_name, id_card, phone, provincia_id, 
         canton_id, barrio_id, latitud, longitud, ubicacion_detallada, 
         id_registrador, id_tipo_registrador_snapshot, nombre_tipo_registrador, id_evento, fecha_registro
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CONVERT_TZ(NOW(), @@session.time_zone, 'America/Guayaquil'))`,
       [
         first_name?.trim(),
         last_name?.trim(),
