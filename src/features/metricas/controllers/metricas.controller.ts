@@ -327,6 +327,16 @@ ORDER BY id_brigada, tipo, total DESC`
         tiempo_inactividad_segundos: tiempoSegundos,
         tiempo_inactividad: formatearTiempoInactividad(tiempoSegundos)
       });
+      
+      // También llenar tipoPorBrigadaMap con registradores que no tienen registros (total = 0)
+      // para asegurar que las brigadas sin registros también muestren sus tipos
+      if (!tipoPorBrigadaMap[idb]) {
+        tipoPorBrigadaMap[idb] = [];
+      }
+      const tipoExiste = tipoPorBrigadaMap[idb].some(t => t.tipo === (r.tipo ?? 'SIN_TIPO'));
+      if (!tipoExiste && Number(r.total) === 0) {
+        tipoPorBrigadaMap[idb].push({ tipo: r.tipo ?? 'SIN_TIPO', total: 0 });
+      }
     });
 
     // Construir array final con brigadas y su desglose por tipo
