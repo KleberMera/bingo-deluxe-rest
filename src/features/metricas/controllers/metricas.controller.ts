@@ -185,36 +185,49 @@ export const allMetrics = async (req: Request, res: Response) => {
 
     // registradores por brigada y por tipo (para mostrar nombres y totales)
     const qRegistradoresPorTipo = pool.query(
-      `SELECT 
-    COALESCE(u.id_evento, 
-             CASE 
-                 WHEN tr.activo = 1 THEN (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)
-                 ELSE null
-             END) AS id_brigada,
+      `-- Registradores que SÍ tienen registros
+SELECT 
+    COALESCE(u.id_evento, (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)) AS id_brigada,
     r.id AS id_registrador,
-    r.nombre_registrador,
-    COALESCE(u.nombre_tipo_registrador,
-            tr.nombre_tipo,
-            'SIN_TIPO') AS tipo,
+    IFNULL(r.nombre_registrador, 'SIN_NOMBRE') COLLATE utf8mb4_unicode_ci AS nombre_registrador,
+    COALESCE(u.nombre_tipo_registrador, tr.nombre_tipo, 'SIN_TIPO') COLLATE utf8mb4_unicode_ci AS tipo,
     COUNT(u.id) AS total,
-    SUM(CASE
-        WHEN DATE(u.fecha_registro) = CURDATE() THEN 1
-        ELSE 0
-    END) AS total_hoy,
+    SUM(CASE WHEN DATE(u.fecha_registro) = CURDATE() THEN 1 ELSE 0 END) AS total_hoy,
     WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number,
     MAX(u.fecha_registro) AS ultimo_registro,
     TIME(MAX(u.fecha_registro)) AS hora_ultimo_registro,
     TIMESTAMPDIFF(SECOND, MAX(u.fecha_registro), CONVERT_TZ(NOW(), @@session.time_zone, 'America/Guayaquil')) AS tiempo_inactividad_segundos
 FROM
     registrador r
-        LEFT JOIN
-    usuarios_otros_sorteos u ON r.id = u.id_registrador
-        AND u.id_evento IS NOT NULL
-        LEFT JOIN
-    tipos_registradores tr ON r.id_tipo_registrador = tr.id
-WHERE (u.nombre_tipo_registrador IS NOT NULL OR tr.nombre_tipo IS NOT NULL)
-GROUP BY r.id , id_brigada , tipo
-ORDER BY id_brigada , tipo , total DESC`
+    LEFT JOIN usuarios_otros_sorteos u ON r.id = u.id_registrador AND u.id_evento IS NOT NULL
+    LEFT JOIN tipos_registradores tr ON r.id_tipo_registrador = tr.id
+WHERE u.id IS NOT NULL
+GROUP BY r.id, COALESCE(u.id_evento, (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)), u.nombre_tipo_registrador, tr.nombre_tipo
+
+UNION ALL
+
+-- Registradores que NO tienen registros en brigada actual
+SELECT 
+    (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1) AS id_brigada,
+    r.id AS id_registrador,
+    IFNULL(r.nombre_registrador, 'SIN_NOMBRE') COLLATE utf8mb4_unicode_ci AS nombre_registrador,
+    COALESCE(tr.nombre_tipo, 'SIN_TIPO') COLLATE utf8mb4_unicode_ci AS tipo,
+    0 AS total,
+    0 AS total_hoy,
+    NULL AS week_number,
+    NULL AS ultimo_registro,
+    NULL AS hora_ultimo_registro,
+    NULL AS tiempo_inactividad_segundos
+FROM
+    registrador r
+    INNER JOIN tipos_registradores tr ON r.id_tipo_registrador = tr.id
+WHERE r.id NOT IN (
+    SELECT DISTINCT id_registrador FROM usuarios_otros_sorteos 
+    WHERE id_evento = (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)
+)
+AND tr.activo = 1
+
+ORDER BY id_brigada, tipo, total DESC`
     );
 
     const results = await Promise.all([
