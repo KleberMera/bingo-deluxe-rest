@@ -330,3 +330,107 @@ export const getAllUsers = async (_req: Request, res: Response) => {
     connection.release();
   }
 };
+
+export const updateCantidadTablas = async (req: Request, res: Response) => {
+  const { id_card } = req.params;
+  const { cantidad_tablas } = req.body;
+
+  // Validaciones
+  if (!id_card || !/^\d{10}$/.test(id_card)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Debe proporcionar una cédula válida de 10 dígitos'
+    });
+  }
+
+  if (cantidad_tablas === undefined || cantidad_tablas === null) {
+    return res.status(400).json({
+      success: false,
+      message: 'Debe proporcionar cantidad_tablas'
+    });
+  }
+
+  if (typeof cantidad_tablas !== 'number' || cantidad_tablas < 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'cantidad_tablas debe ser un número no negativo'
+    });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    // Verificar que el usuario existe
+    const [userRows]: any = await connection.query(
+      `SELECT id FROM usuarios_otros_sorteos WHERE id_card = ?`,
+      [id_card]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    const userId = userRows[0].id;
+
+    // Actualizar cantidad_tablas
+    const [result]: any = await connection.query(
+      `UPDATE usuarios_otros_sorteos 
+       SET cantidad_tablas = ?, updated_at = NOW() 
+       WHERE id_card = ?`,
+      [cantidad_tablas, id_card]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se pudo actualizar cantidad_tablas'
+      });
+    }
+
+    // Obtener usuario actualizado
+    const [updatedUser]: any = await connection.query(
+      `SELECT 
+        id,
+        first_name,
+        last_name,
+        id_card,
+        phone,
+        provincia_id,
+        canton_id,
+        barrio_id,
+        latitud,
+        longitud,
+        ubicacion_detallada,
+        otp,
+        otp_expires_at,
+        phone_verified,
+        id_registrador,
+        id_tipo_registrador_snapshot,
+        nombre_tipo_registrador,
+        id_evento,
+        fecha_registro,
+        cantidad_tablas,
+        created_at,
+        updated_at
+       FROM usuarios_otros_sorteos WHERE id = ?`,
+      [userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Cantidad de tablas actualizada exitosamente',
+      data: updatedUser[0]
+    });
+  } catch (error) {
+    console.error('Error en updateCantidadTablas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  } finally {
+    connection.release();
+  }
+};
