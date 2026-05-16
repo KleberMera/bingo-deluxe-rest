@@ -434,3 +434,43 @@ export const updateCantidadTablas = async (req: Request, res: Response) => {
     connection.release();
   }
 };
+
+
+export const getResumenPorTipoRegistrador = async (_req: Request, res: Response) => {
+  const connection = await pool.getConnection();
+  try {
+    const [rows]: any = await connection.query(
+      `SELECT
+        tr.id,
+        tr.nombre_tipo  as ACTIVIDAD,
+        COUNT(uos.id_card) AS CANTIDAD_REGISTROS,
+        SUM(uos.cantidad_tablas) AS CANTIDAD_TABLAS
+      FROM usuarios_otros_sorteos uos
+      JOIN brigadas b 
+        ON b.id_brigada = uos.id_evento
+      JOIN tipos_registradores tr 
+        ON tr.id = uos.id_tipo_registrador_snapshot
+      WHERE b.activa = 1
+        AND tr.activo = 1
+      GROUP BY 
+        tr.id,
+        tr.nombre_tipo
+      ORDER BY 
+        tr.nombre_tipo;`
+    );
+    res.status(200).json({
+      success: true,
+      message: 'Resumen por tipo de registrador obtenido exitosamente',
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error en getResumenPorTipoRegistrador:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener el resumen',
+      data: null
+    });
+  } finally {
+    connection.release();
+  }
+};

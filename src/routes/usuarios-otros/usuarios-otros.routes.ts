@@ -14,5 +14,7 @@ router.put('/cantidad-tablas/:id_card', usuariosOtrosController.updateCantidadTa
 
 // Obtener todos los usuarios
 router.get('/', usuariosOtrosController.getAllUsers);
+// Resumen por tipo de registrador (agrupado)
+router.get('/resumen/tipo-registrador', usuariosOtrosController.getResumenPorTipoRegistrador);
 
 export default router;
