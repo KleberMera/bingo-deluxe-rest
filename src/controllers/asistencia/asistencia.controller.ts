@@ -52,6 +52,30 @@ export const registrarAsistencia = async (req: Request, res: Response) => {
 
     const activeBrigade = brigadaRows[0];
 
+    // Verificar si ya existe asistencia con la misma cédula en la misma brigada
+    if (cedula) {
+      const [existingAsistencia]: any = await connection.query(
+        `SELECT id, nombres, apellidos, cedula, created_at 
+         FROM asistencia 
+         WHERE cedula = ? AND id_brigada = ?`,
+        [cedula.trim(), activeBrigade.id_brigada]
+      );
+
+      if (existingAsistencia.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "Esta persona ya tiene registro de asistencia en esta brigada",
+          data: {
+            id: existingAsistencia[0].id,
+            nombres: existingAsistencia[0].nombres,
+            apellidos: existingAsistencia[0].apellidos,
+            cedula: existingAsistencia[0].cedula,
+            fecha_registro: existingAsistencia[0].created_at
+          }
+        });
+      }
+    }
+
     // Insertar el registro de asistencia
     const [result]: any = await connection.query(
       `INSERT INTO asistencia (
