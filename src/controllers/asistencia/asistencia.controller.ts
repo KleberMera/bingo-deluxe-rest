@@ -100,7 +100,7 @@ export const registrarAsistencia = async (req: Request, res: Response) => {
         a.cedula,
         a.id_brigada,
         b.nombre_brigada,
-        a.created_at
+        CONVERT_TZ(a.created_at, @@session.time_zone, 'America/Guayaquil') as created_at
       FROM asistencia a
       LEFT JOIN brigadas b ON a.id_brigada = b.id_brigada
       WHERE a.id = ?`,
@@ -136,7 +136,7 @@ export const obtenerAsistencias = async (req: Request, res: Response) => {
       a.cedula,
       a.id_brigada,
       b.nombre_brigada,
-      a.created_at
+      CONVERT_TZ(a.created_at, @@session.time_zone, 'America/Guayaquil') as created_at
     FROM asistencia a
     LEFT JOIN brigadas b ON a.id_brigada = b.id_brigada`;
 
@@ -205,7 +205,7 @@ export const obtenerAsistenciasPorBrigadaActiva = async (
         a.cedula,
         a.id_brigada,
         b.nombre_brigada,
-        a.created_at
+        CONVERT_TZ(a.created_at, @@session.time_zone, 'America/Guayaquil') as created_at
       FROM asistencia a
       LEFT JOIN brigadas b ON a.id_brigada = b.id_brigada
       WHERE a.id_brigada = ?
