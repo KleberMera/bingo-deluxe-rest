@@ -196,7 +196,12 @@ SELECT
     WEEKOFYEAR(MAX(u.fecha_registro)) AS week_number,
     MAX(u.fecha_registro) AS ultimo_registro,
     TIME(MAX(u.fecha_registro)) AS hora_ultimo_registro,
-    TIMESTAMPDIFF(SECOND, MAX(u.fecha_registro), CONVERT_TZ(NOW(), @@session.time_zone, 'America/Guayaquil')) AS tiempo_inactividad_segundos
+TIMESTAMPDIFF(
+  SECOND,
+  MAX(u.fecha_registro),
+  NOW()
+) AS tiempo_inactividad_segundos
+
 FROM
     registrador r
     LEFT JOIN usuarios_otros_sorteos u ON r.id = u.id_registrador AND u.id_evento IS NOT NULL
