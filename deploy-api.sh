@@ -12,7 +12,7 @@ git pull
 
 echo ""
 echo "Instalando dependencias..."
-npm install
+npm install --force
 
 echo ""
 echo "Compilando proyecto..."
