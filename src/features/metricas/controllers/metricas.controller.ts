@@ -207,7 +207,7 @@ FROM
     LEFT JOIN usuarios_otros_sorteos u ON r.id = u.id_registrador AND u.id_evento IS NOT NULL
     LEFT JOIN tipos_registradores tr ON r.id_tipo_registrador = tr.id
 WHERE u.id IS NOT NULL
-GROUP BY r.id, COALESCE(u.id_evento, (SELECT id_brigada FROM brigadas WHERE activa = 1 LIMIT 1)), u.nombre_tipo_registrador, tr.nombre_tipo
+GROUP BY r.id, u.id_evento, u.nombre_tipo_registrador, tr.nombre_tipo
 
 UNION ALL
 
